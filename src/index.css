@@ -1,0 +1,22 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html, body, #root {
+    background-color: #080808;
+    color: #ffffff;
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  }
+}
+
+@layer utilities {
+  .bg-white\/3 { background-color: rgba(255,255,255,0.03); }
+  .bg-white\/4 { background-color: rgba(255,255,255,0.04); }
+  .bg-white\/6 { background-color: rgba(255,255,255,0.06); }
+  .bg-white\/8 { background-color: rgba(255,255,255,0.08); }
+  .border-white\/6 { border-color: rgba(255,255,255,0.06); }
+  .border-white\/8 { border-color: rgba(255,255,255,0.08); }
+  .bg-amber-500\/8 { background-color: rgba(245,158,11,0.08); }
+  .bg-emerald-500\/8 { background-color: rgba(16,185,129,0.08); }
+}
