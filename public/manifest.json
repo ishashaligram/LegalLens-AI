@@ -1,22 +1,15 @@
 {
   "manifest_version": 3,
-  "name": "LegalLens AI Copilot",
-  "version": "1.0.0",
-  "description": "AI-powered analysis of Terms of Service",
-  "action": {
-    "default_title": "LegalLens AI"
+  "name": "LegalLens AI",
+  "version": "1.1.0",
+  "permissions": ["sidePanel", "activeTab", "scripting", "storage"],
+  "background": {
+    "service_worker": "background.js"
   },
   "side_panel": {
     "default_path": "index.html"
   },
-  "permissions": [
-    "sidePanel",
-    "scripting",
-    "activeTab",
-    "storage"
-  ],
-  "host_permissions": [
-    "<all_urls>",
-    "http://127.0.0.1:8000/*"
-  ]
+  "action": {
+    "default_title": "Open LegalLens Audit"
+  }
 }

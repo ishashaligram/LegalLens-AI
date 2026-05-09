@@ -9,11 +9,8 @@ export interface AnalysisCategory {
 export interface QuickCheck {
   id: string;
   question: string;
-  // Changed from boolean to string literals to match your analyzer logic
-  answer: 'YES' | 'NO' | null; 
-  explanation?: string;
-  // Added risk to match the objects in your analyzer.ts
-  risk?: 'low' | 'high'; 
+  answer: 'YES' | 'NO';
+  risk: 'low' | 'medium' | 'high';
 }
 
 export interface AnalysisResult {
@@ -22,7 +19,7 @@ export interface AnalysisResult {
   categories: AnalysisCategory[];
   quickChecks: QuickCheck[];
   analyzedAt: string;
-  documentTitle: string;
+  documentTitle: string; // This is likely what was throwing the error
   documentUrl: string;
 }
 
