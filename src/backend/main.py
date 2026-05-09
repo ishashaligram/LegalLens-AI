@@ -1,136 +1,88 @@
 import os
-import requests
-import json
+import uvicorn
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-from typing import List, Dict, Any
-from apify_client import ApifyClient
+from typing import List, Optional, Dict, Any
+from datetime import datetime
 from dotenv import load_dotenv
+
+# Import updated services
+from services.apify_service import harvest_website_text
+from services.dify_service import analyze_with_dify  # Changed from Zynd to Dify
+from services.gemini_service import get_gemini_comparison
+from utils.analyzer import get_comparison
 
 # Load environment variables
 load_dotenv()
 
-app = FastAPI(title="LegalGuard AI: Financial & T&C Auditor")
+app = FastAPI(title="LegalGuard AI: Multi-Agent Auditor")
 
-# Middleware for Chrome Extension connection
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"], # Extension environment is often dynamic
+    allow_origins=["*"],  
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# API Keys
-APIFY_API_TOKEN = os.getenv("APIFY_API_TOKEN")
-ZYND_API_KEY = os.getenv("ZYND_API_KEY")
-ZYND_APP_ID = os.getenv("ZYND_APP_ID")
-
-apify_client = ApifyClient(APIFY_API_TOKEN)
-
-# --- Data Models ---
 class AnalysisRequest(BaseModel):
     url: str
 
-class Finding(BaseModel):
-    severity: str
-    description: str
-
 class AnalysisResponse(BaseModel):
-    title: str
+    documentTitle: str
+    documentUrl: str
     category: str
+    overallRisk: str
     risk_score: int
     summary: str
-    findings: List[Finding]
-    comparison_data: Optional[Dict[str, Any]] = None # For Financial Comparisons
-
-# --- Core Functions ---
-
-def get_dynamic_text(url: str):
-    """Dynamically harvests text using Playwright to handle JS-heavy sites."""
-    run_input = {
-        "startUrls": [{"url": url}],
-        "maxCrawlPages": 1,
-        "crawlerType": "playwright:firefox",
-    }
-    try:
-        run = apify_client.actor("apify/website-content-crawler").call(run_input=run_input)
-        dataset = apify_client.dataset(run["defaultDatasetId"]).list_items().items
-        if dataset:
-            # We prioritize Markdown for the AI to understand structure
-            return dataset[0].get("markdown") or dataset[0].get("text") or ""
-        return ""
-    except Exception as e:
-        print(f"Scraping Error: {e}")
-        return ""
-
-def perform_agentic_audit(text: str, is_financial: bool = False):
-    """Sends the scraped text to Zynd AI for Audit."""
-    url = "https://api.zbrain.ai/contentms/v2/api/query-app"
-    headers = {
-        "Authorization": f"Bearer {ZYND_API_KEY}",
-        "Content-Type": "application/json"
-    }
-
-    # Dynamic Prompting based on Category
-    prompt = (
-        "Analyze this text for financial risks, interest rates, and hidden fees. "
-        if is_financial else 
-        "Analyze this text for privacy risks, data sharing, and termination clauses. "
-    )
-    
-    prompt += "Return a JSON with 'risk_score' (0-100), 'summary', and 'findings' (list of {severity, description})."
-
-    payload = {
-        "query": f"{prompt} TEXT: {text[:12000]}", # Limit text to stay within context windows
-        "appId": ZYND_APP_ID 
-    }
-    
-    try:
-        response = requests.post(url, json=payload, headers=headers)
-        response.raise_for_status()
-        # Parse the nested response string from Zynd if necessary
-        return response.json()
-    except Exception as e:
-        print(f"Zynd AI Error: {e}")
-        return None
-
-# --- API Routes ---
+    categories: List[Dict[str, Any]]
+    quickChecks: List[Dict[str, Any]]
+    analyzedAt: str
+    comparison_text: str
+    agentic_insight: Optional[str] = None
 
 @app.post("/analyze", response_model=AnalysisResponse)
 async def analyze_site(request: AnalysisRequest):
-    # 1. Harvest Fresh Data (Fixes the 'data doesn't change' issue)
-    raw_text = get_dynamic_text(request.url)
+    # 1. Sourcing Layer (Apify)
+    raw_text = harvest_website_text(request.url)
     if not raw_text:
-        raise HTTPException(status_code=400, detail="Failed to scrape text from URL.")
+        raise HTTPException(status_code=400, detail="Failed to extract content.")
 
-    # 2. Determine Category (Financial vs General)
-    # This logic checks if the site is a bank/fintech based on keywords
-    financial_keywords = ["loan", "bank", "interest", "apr", "credit", "mortgage", "investment"]
+    # 2. Automated Categorization
+    financial_keywords = ["loan", "bank", "interest", "apr", "credit", "mortgage", "investment", "finance"]
     is_financial = any(word in raw_text.lower() for word in financial_keywords)
-    category_label = "Financial Services" if is_financial else "General Terms of Service"
+    category_label = "Financial Services" if is_financial else "General Terms"
 
-    # 3. Perform the Audit
-    audit_data = perform_agentic_audit(raw_text, is_financial)
+    # 3. Structural Audit (Dify Layer)
+    # We pass the category so Dify's brain knows which legal standards to apply
+    audit_data = analyze_with_dify(raw_text, category_label)
     
     if not audit_data:
-        raise HTTPException(status_code=500, detail="AI Analysis failed.")
+        raise HTTPException(status_code=500, detail="Dify agent failed to analyze the document.")
 
-    # 4. Return Combined Analysis
+    # 4. Reasoning Layer (Gemini)
+    gemini_insight = get_gemini_comparison(raw_text, category_label)
+
+    # 5. Benchmark Calculation
+    # Ensure your Dify workflow outputs a key named 'risk_score'
+    risk_val = int(audit_data.get("risk_score", 50)) 
+    comparison_result = get_comparison(risk_val, category_label)
+
+    # 6. Formulate Final Response
     return {
-    "documentTitle": f"Audit for {request.url.split('//')[-1].split('/')[0]}",
-    "documentUrl": request.url,
-    "category": category_label,
-    "overallRisk": "high" if audit_raw.get("risk_score", 0) > 70 else "medium",
-    "risk_score": audit_raw.get("risk_score", 50),
-    "summary": audit_raw.get("summary", ""),
-    "categories": audit_raw.get("categories", []), # Ensure Zynd returns this list
-    "quickChecks": audit_raw.get("quickChecks", []), # Ensure Zynd returns this list
-    "analyzedAt": "2026-05-10", # Use dynamic date in production
-    "comparison_text": get_comparison(audit_raw.get("risk_score", 50), category_label)
-}
+        "documentTitle": f"LegalGuard Audit: {request.url.split('//')[-1].split('/')[0]}",
+        "documentUrl": request.url,
+        "category": category_label,
+        "overallRisk": "high" if risk_val > 70 else "medium" if risk_val > 30 else "low",
+        "risk_score": risk_val,
+        "summary": audit_data.get("summary", "Analysis complete."),
+        "categories": audit_data.get("categories", []), # List of risk categories from Dify
+        "quickChecks": audit_data.get("quickChecks", []), # Specific flag checks from Dify
+        "analyzedAt": datetime.now().strftime("%Y-%m-%d %H:%M"),
+        "comparison_text": comparison_result["comparison_text"],
+        "agentic_insight": gemini_insight
+    }
 
 if __name__ == "__main__":
-    import uvicorn
     uvicorn.run(app, host="127.0.0.1", port=8000)
