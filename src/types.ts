@@ -16,11 +16,14 @@ export interface QuickCheck {
 export interface AnalysisResult {
   summary: string;
   overallRisk: 'low' | 'medium' | 'high';
+  risk_score?: number; // Added to match backend 0-100 score
+  category: string; // Added to distinguish "Financial" vs "General"
   categories: AnalysisCategory[];
   quickChecks: QuickCheck[];
   analyzedAt: string;
-  documentTitle: string; // This is likely what was throwing the error
+  documentTitle: string; 
   documentUrl: string;
+  comparison_text?: string; // Added for the comparison logic
 }
 
 export interface PendingAnalysis {

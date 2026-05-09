@@ -1,15 +1,20 @@
 {
   "manifest_version": 3,
-  "name": "LegalLens AI",
-  "version": "1.1.0",
-  "permissions": ["sidePanel", "activeTab", "scripting", "storage"],
-  "background": {
-    "service_worker": "background.js"
-  },
-  "side_panel": {
-    "default_path": "index.html"
-  },
+  "name": "LegalGuard AI",
+  "version": "1.0",
+  "permissions": ["activeTab", "scripting", "storage"],
+  "host_permissions": [
+    "http://127.0.0.1:8000/*",
+    "https://api.zbrain.ai/*",
+    "https://api.apify.com/*"
+  ],
   "action": {
-    "default_title": "Open LegalLens Audit"
-  }
+    "default_popup": "index.html"
+  },
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["content.js"]
+    }
+  ]
 }
