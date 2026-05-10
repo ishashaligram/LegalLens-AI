@@ -11,7 +11,7 @@ from dotenv import load_dotenv
 from services.apify_service import harvest_website_text
 from services.dify_service import analyze_with_dify
 from services.gemini_service import get_gemini_comparison
-from utils.analyzer import get_comparison
+from utils.categorizer import get_comparison
 
 # Load environment variables
 load_dotenv()
