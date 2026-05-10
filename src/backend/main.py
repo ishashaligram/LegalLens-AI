@@ -42,7 +42,7 @@ class AnalysisResponse(BaseModel):
     comparison_text: str
     agentic_insight: Optional[str] = None
 
-@app.post("/analyze", response_model=AnalysisResponse)
+@app.post("/analyze-single", response_model=AnalysisResponse)
 async def analyze_site(request: AnalysisRequest):
     # 1. Sourcing Layer (Apify)
     raw_text = harvest_website_text(request.url)
