@@ -76,7 +76,7 @@ async def analyze_site(request: AnalysisRequest):
         "category": category_label,
         "overallRisk": "high" if risk_val > 70 else "medium" if risk_val > 30 else "low",
         "risk_score": risk_val,
-        "summary": audit_data.get("summary", "Analysis complete."),
+       "summary": audit_data.get("text", "No summary generated."),
         "categories": audit_data.get("categories", []), # List of risk categories from Dify
         "quickChecks": audit_data.get("quickChecks", []), # Specific flag checks from Dify
         "analyzedAt": datetime.now().strftime("%Y-%m-%d %H:%M"),
