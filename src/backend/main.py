@@ -8,11 +8,7 @@ from datetime import datetime
 from dotenv import load_dotenv
 
 # Import updated services
-# In main.py, change the import to:
-from services.apify_service import scrape_financial_site
-
-# Then, wherever you were calling harvest_website_text(), use:
-content = scrape_financial_site(url)
+from services.apify_service import harvest_website_text
 from services.dify_service import analyze_with_dify
 from services.gemini_service import get_gemini_comparison
 from utils.categorizer import get_comparison
