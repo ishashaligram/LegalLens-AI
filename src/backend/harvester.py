@@ -1,3 +1,13 @@
+import os
+from apify_client import ApifyClient
+from dotenv import load_dotenv
+
+# 1. Load the variables from your .env file
+load_dotenv()
+
+# 2. Initialize the client using your API key
+# Make sure "APIFY_API_TOKEN" is inside your .env file!
+client = ApifyClient(os.getenv("APIFY_API_TOKEN"))
 def harvest_website_text(url: str):
     """
     Sourcing Layer: Uses Apify Cloud to bypass bot detection.
