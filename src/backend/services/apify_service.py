@@ -3,8 +3,7 @@ import os
 
 # Initialize with your token
 client = ApifyClient(os.getenv("APIFY_API_TOKEN"))
-
-def scrape_financial_site(url: str):
+def harvest_website_text(url: str):
     """
     Scrapes high-security sites (Banking/Crypto) using a headless 
     browser and residential proxies to avoid detection.
